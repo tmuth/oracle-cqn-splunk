@@ -73,6 +73,17 @@ BEGIN
   is
   begin
     null;
+    /*
+    select regexp_replace(xml3,'(.+),.+$','{\1}',1,1,'n') xml4 from (
+      select regexp_replace(xml2,'<(\w+)>(.+)</\1>','"\1" : "\2",',1,0,'n') xml3 from (
+      select regexp_replace(xml,'(^.+<ROW>)(.*)(</ROW>.*)','\2',1,1,'n') xml2 from (
+      SELECT dbms_xmlgen.getXML('SELECT * from soe.customers where rownum=1') xml
+      FROM dual
+      )
+      )
+      );
+
+    */
   end convert_row_json;
 
 
