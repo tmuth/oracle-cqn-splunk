@@ -14,3 +14,8 @@ GRANT "RESOURCE" TO cqn ;
 
 grant execute on DBMS_CQ_NOTIFICATION to cqn;
 GRANT CHANGE NOTIFICATION TO cqn;
+
+-- for logger:
+grant connect,create view, create job, create table, create sequence, create trigger, create procedure, create any context to cqn;
+
+grant select on soe.customers to cqn;

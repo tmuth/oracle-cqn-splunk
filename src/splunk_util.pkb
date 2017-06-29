@@ -1,22 +1,26 @@
 create or replace package body splunk_util as
 
-  procedure change_callback(ntfnds in cq_notification$_descriptor) as
-  regid          NUMBER;
-  tbname         VARCHAR2(60);
-  event_type     NUMBER;
-  numtables      NUMBER;
-  operation_type NUMBER;
-  operation_type_desc varchar2(100);
-  numrows        NUMBER;
-  row_id         VARCHAR2(2000);
-  numqueries     NUMBER;
-  qid            NUMBER;
-  qop            NUMBER;
+  gc_scope_prefix constant varchar2(31) := lower($$plsql_unit) || '.';
+
+  procedure change_callback(ntfnds in cq_notification$_descriptor)
+  as
+    regid          NUMBER;
+    tbname         VARCHAR2(60);
+    event_type     NUMBER;
+    numtables      NUMBER;
+    operation_type NUMBER;
+    operation_type_desc varchar2(100);
+    numrows        NUMBER;
+    row_id         VARCHAR2(2000);
+    numqueries     NUMBER;
+    qid            NUMBER;
+    qop            NUMBER;
+    l_scope logger_logs.scope%type := gc_scope_prefix || 'change_callback';
 BEGIN
   regid      := ntfnds.registration_id;
   event_type := ntfnds.event_type;
   INSERT INTO cqn_events VALUES
-    (regid, event_type);
+    (systimestamp,regid, event_type);
   numqueries    :=0;
   IF (event_type = DBMS_CQ_NOTIFICATION.EVENT_QUERYCHANGE) THEN
     numqueries  := ntfnds.query_desc_array.count;
@@ -25,7 +29,7 @@ BEGIN
       qid := ntfnds.query_desc_array(i).queryid;
       qop := ntfnds.query_desc_array(i).queryop;
       INSERT INTO cqn_queries VALUES
-        (qid, qop);
+        (systimestamp,qid, qop);
       numtables := 0;
       numtables := ntfnds.query_desc_array(i).table_desc_array.count;
       FOR j IN 1..numtables
@@ -51,14 +55,19 @@ BEGIN
         END IF;
 
         INSERT INTO cqn_table_changes VALUES
-          (qid, tbname, operation_type, operation_type_desc, numrows);
+          (systimestamp,qid, tbname, operation_type, operation_type_desc, numrows);
 
         /* Body of loop does not execute when numrows is zero */
         FOR k IN 1..numrows
         LOOP
           Row_id := ntfnds.query_desc_array(i).table_desc_array(j).row_desc_array(k).row_id;
           INSERT INTO cqn_row_changes VALUES
-            (qid, tbname, Row_id, operation_type_desc);
+            (systimestamp,qid, tbname, Row_id, operation_type_desc);
+            for c1 in (select customer_id from soe.customers where rowid = row_id)
+            loop
+              logger.log('customer_id:' || c1.customer_id||', rowid: '|| row_id,l_scope);
+            end loop; --c1
+
         END LOOP; -- loop over rows (k)
       END LOOP;   -- loop over tables (j)
     END LOOP;     -- loop over queries (i)

@@ -7,7 +7,7 @@ DECLARE
 BEGIN
   /* Register two queries for QRNC: */
   /* 1. Construct registration information. chnf_callback is name of notification handler. QOS_QUERY specifies result-set-change notifications. */
-  reginfo := cq_notification$_reg_info ( 'SPLUNK_UTIL.change_callback', DBMS_CQ_NOTIFICATION.QOS_BEST_EFFORT+ DBMS_CQ_NOTIFICATION.QOS_ROWIDS + DBMS_CQ_NOTIFICATION.QOS_QUERY, 0, 0, 0 );
+  reginfo := cq_notification$_reg_info ( 'SPLUNK_UTIL.change_callback', DBMS_CQ_NOTIFICATION.QOS_ROWIDS + DBMS_CQ_NOTIFICATION.QOS_QUERY, 0, 0, 0 );
   /* 2. Create registration. */
   regid := DBMS_CQ_NOTIFICATION.new_reg_start(reginfo);
   /*
