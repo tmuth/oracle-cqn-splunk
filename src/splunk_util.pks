@@ -11,7 +11,9 @@ create or replace package splunk_util as
   procedure save_row( p_table_name in varchar2,
                       p_rowid in VARCHAR2);
 
-  procedure push_event(p_event_id in number,
+  procedure push_event(p_event_id in number default null,
+                       p_event_clob in clob,
+                       p_event_operation in varchar2,
                        p_remove_pushed in boolean default false);
 
 
