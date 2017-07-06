@@ -1,5 +1,5 @@
-create or replace trigger biu_logger_prefs
-  before insert or update on logger_prefs
+create or replace trigger biu_splk_prefs
+  before insert or update on splk_prefs
   for each row
 begin
   if :new.pref_name not in (

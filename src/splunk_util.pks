@@ -14,6 +14,9 @@ create or replace package splunk_util as
   procedure push_event(p_event_id in number default null,
                        p_event_clob in clob,
                        p_event_operation in varchar2,
+                       p_table_name in varchar2,
+                       p_row_id     in varchar2,
+                       p_event_timestamp in timestamp default systimestamp,
                        p_remove_pushed in boolean default false);
 
 

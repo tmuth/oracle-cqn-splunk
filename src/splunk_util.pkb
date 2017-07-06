@@ -2,6 +2,17 @@ create or replace package body splunk_util as
 
   gc_scope_prefix constant varchar2(31) := lower($$plsql_unit) || '.';
 
+  function timestamp_to_epoch(p_timestamp in timestamp)
+  return number
+  as
+    l_unix_epoch number;
+  begin
+    --l_unix_epoch := ( p_timestamp - to_timestamp('1970-01-01','YYYY-MM-DD' )) * 60 * 60 * 24;
+    l_unix_epoch := extract(day from(sys_extract_utc(p_timestamp) - to_timestamp('1970-01-01', 'YYYY-MM-DD'))) * 86400000
+            + to_number(to_char(sys_extract_utc(p_timestamp), 'SSSSSFF3'));
+    return l_unix_epoch;
+  end timestamp_to_epoch;
+
   procedure change_callback(ntfnds in cq_notification$_descriptor)
   as
     regid          NUMBER;
@@ -33,6 +44,7 @@ BEGIN
         (systimestamp,qid, qop);
       numtables := 0;
       numtables := ntfnds.query_desc_array(i).table_desc_array.count;
+
       FOR j IN 1..numtables
       LOOP
         tbname := ntfnds.query_desc_array(i).table_desc_array(j).table_name;
@@ -58,7 +70,7 @@ BEGIN
         INSERT INTO cqn_table_changes VALUES
           (systimestamp,qid, tbname, operation_type, operation_type_desc, numrows);
 
-        /* Body of loop does not execute when numrows is zero */
+        -- Body of loop does not execute when numrows is zero
         FOR k IN 1..numrows
         LOOP
           Row_id := ntfnds.query_desc_array(i).table_desc_array(j).row_desc_array(k).row_id;
@@ -68,7 +80,9 @@ BEGIN
             l_row_json := convert_row_json(p_table_name => tbname, p_rowid=> Row_id);
             push_event(
                 p_event_clob      => l_row_json,
-                p_event_operation => operation_type_desc);
+                p_event_operation => operation_type_desc,
+                p_table_name      => tbname,
+                p_row_id          => Row_id);
 
 
             /*
@@ -80,6 +94,7 @@ BEGIN
 
         END LOOP; -- loop over rows (k)
       END LOOP;   -- loop over tables (j)
+
     END LOOP;     -- loop over queries (i)
   END IF;
   COMMIT;
@@ -121,6 +136,9 @@ BEGIN
   procedure push_event(p_event_id in number default null,
                        p_event_clob in clob,
                        p_event_operation in varchar2,
+                       p_table_name in varchar2,
+                       p_row_id     in varchar2,
+                       p_event_timestamp in timestamp default systimestamp,
                        p_remove_pushed in boolean default false)
   as
     l_splunk_hec_token varchar2(64) := 'FCF35C06-9428-430C-BDBC-E26E901ECBA9';
@@ -133,14 +151,25 @@ BEGIN
 
     l_body CLOB;
     l_result CLOB;
+    l_db_host varchar2(200);
+    l_unix_epoch number;
+
     l_scope logger_logs.scope%type := gc_scope_prefix || 'push_event';
   begin
+
+    l_db_host :=  sys_context('USERENV','SERVER_HOST')||'.'||sys_context('USERENV','DB_NAME');
+    l_unix_epoch := timestamp_to_epoch(p_event_timestamp);
+
     apex_web_service.g_request_headers(1).name := 'Authorization';
     apex_web_service.g_request_headers(1).value := 'Splunk '||l_splunk_hec_token;
 
-                 l_body := '{"event": '||
+                 l_body := '{ "time": '||l_unix_epoch || ','||
+                            ' "host": "' || l_db_host  || '",'||
+                            ' "source": "' || p_table_name || '",'||
+                            ' "event": '||
                             --'{ "event_id" : '||p_event_id||' }'||
-                            '{"cqn_operation": "'|| p_event_operation||'", '||
+                            '{"@cqn_operation": "'|| p_event_operation||'", '||
+                            '"@cqn_rowid": "'|| p_row_id||'", '||
                             p_event_clob ||
                             '}}';
     logger.log('l_body:' || l_body,l_scope);

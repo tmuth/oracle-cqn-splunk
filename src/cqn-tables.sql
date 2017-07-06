@@ -35,7 +35,7 @@ CREATE TABLE cqn_row_changes
   );
 
 
-create table splku_prefs(
+create table splk_prefs(
     pref_name	varchar2(255),
     pref_value	varchar2(255) not null,
     constraint splku_prefs_pk primary key (pref_name) enable
