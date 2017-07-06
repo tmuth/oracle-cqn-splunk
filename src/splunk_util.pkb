@@ -114,6 +114,16 @@ BEGIN
     dbms_xmlgen.setRowSetTag(qrycontext,NULL);
     l_out := DBMS_XMLGEN.getxml (qrycontext);
     dbms_xmlgen.closecontext(qrycontext);
+/*
+    l_out := replace(l_out,'<?xml version="1.0"?>');
+    l_out := replace(l_out,'<ROW>');
+    l_out := replace(l_out,'</ROW>');
+    l_out := ltrim(l_out,chr(10)||chr(32));
+    l_out := rtrim(l_out,chr(10)||chr(32));
+    -- remove the trailing XML tag from each column
+    l_out := regexp_replace(l_out,'<(\w+)>(.+)</\1>','"\1" : "\2",',1,0,'n');
+    l_out := rtrim(l_out,',');
+*/
 
     -- remove header and row XML
     l_out := regexp_replace(l_out,'(^.+<ROW>)(.*)(</ROW>.*)','\2',1,1,'n');
@@ -172,7 +182,7 @@ BEGIN
                             '"@cqn_rowid": "'|| p_row_id||'", '||
                             p_event_clob ||
                             '}}';
-    logger.log('l_body:' || l_body,l_scope);
+    -- logger.log('l_body:' || l_body,l_scope);
 
     if l_splunk_ssl then
       l_http_prefix := 'https';
@@ -186,7 +196,7 @@ BEGIN
      ,p_body =>  l_body
      );
 
-     logger.log('l_result:' || l_result,l_scope);
+     -- logger.log('l_result:' || l_result,l_scope);
 
   end push_event;
 
